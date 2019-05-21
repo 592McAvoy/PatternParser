@@ -1,0 +1,6 @@
+assets/attrib.txt
+.idea/
+todo.rtf
+.vs/
+CreasePatternScripts/**/*.pdf
+CreasePatternScripts/**/*.svg
