@@ -176,7 +176,7 @@ void Pattern::parseLine(vector<XMLElement*> &vec) {
 			break;
 		}			
 		case Valley: {
-			edgesRaw.push_back(Edge(v1, v2, -getOpacityAngle(e), type));
+			edgesRaw.push_back(Edge(v1, v2, getOpacityAngle(e), type));
 			break;
 		}
 		case NONE:
@@ -313,8 +313,8 @@ void Pattern::parseSVG() {
 	UniqueVertices(verticesRaw);
 	UniqueEdges(edgesRaw);
 
-		//debugEdgeList(edgesRaw);
-		//debugVerticeList(verticesRaw);
+		debugEdgeList(edgesRaw);
+		debugVerticeList(verticesRaw);
 
 }
 
