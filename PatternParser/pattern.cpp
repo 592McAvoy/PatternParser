@@ -1,6 +1,7 @@
 #include "pattern.h"
+#include "geom.h"
 
-/* Helper function */
+/* Debug function */
 static void debugElementList(vector<XMLElement*> &vec) {
 	for (XMLElement* e : vec) {
 		XMLPrinter p;
@@ -10,7 +11,7 @@ static void debugElementList(vector<XMLElement*> &vec) {
 }
 
 static void debugEdgeList(vector<Edge> &vec) {
-	cout << "length: " << vec.size() << endl;
+	cout << "Edge length: " << vec.size() << endl;
 	string types[] = {
 	"Border", "Mountain", "Valley", "Cut", "Triangulation", "Hinge", "NONE"
 	};
@@ -26,12 +27,24 @@ static void debugEdgeList(vector<Edge> &vec) {
 }
 
 static void debugVerticeList(vector<Vertice> &vec) {
-	cout << "length: " << vec.size() << endl;
+	cout << "Vertice length: " << vec.size() << endl;
 	for (Vertice v : vec) {
-		cout << "v (" << v.x << "," << v.y << "," << v.z << ")\n";
+		cout << "v (" << v.x << "," << v.y << "," << v.z << "), ";
+	}
+	cout << endl;
+}
+
+static void debugVerticeNeighbor(vector<vector<Vertice>> &vec) {
+	cout << "Vertice length: " << vec.size() << endl;
+	int n = vec.size();
+	for (int i = 0; i < n; i++) {
+		vector<Vertice> neis = vec[i];
+		cout << "vertice " << i << ":\t";
+		debugVerticeList(neis);
 	}
 }
 
+/* Helper function */
 static char easytolower(char in) {
 	if (in <= 'Z' && in >= 'A')
 		return in - ('Z' - 'z');
@@ -50,6 +63,10 @@ static bool compareEdge(Edge e1, Edge e2) {
 	return compareVertice(e1.v1, e2.v1);
 }
 
+static bool compareNeighbors(Vertice &v1, Vertice &v2) {
+	return sortByAngle(Vector3(v1), Vector3(v2));
+}
+
 static void UniqueVertices(vector<Vertice> &vec) {
 	sort(vec.begin(), vec.end(), compareVertice);
 	vec.erase(unique(vec.begin(), vec.end()), vec.end());
@@ -59,7 +76,6 @@ static void UniqueEdges(vector<Edge> &vec) {
 	sort(vec.begin(), vec.end(), compareEdge);
 	vec.erase(unique(vec.begin(), vec.end()), vec.end());
 }
-
 
 // http://paulbourke.net/geometry/pointlineplane/
 static void line_intersect(Vector2 &v1, Vector2 &v2, Vector2 &v3, Vector2 &v4, Vector2 &intersection, float &t1, float &t2) {
@@ -278,6 +294,36 @@ void Pattern::findIntersections() {
 	}
 }
 
+void Pattern::findVerticeNeighbors() {
+	int n = verticesRaw.size();
+	for (int i = 0; i < n; i++) {
+		verticeNeighbors.push_back(vector<Vertice>());
+	}
+	
+	vector<Vertice>::iterator base = verticesRaw.begin();
+	for (Edge e : edgesRaw) {
+		vector<Vertice>::iterator it1, it2;
+		it1 = find(verticesRaw.begin(), verticesRaw.end(), e.v1);
+		it2 = find(verticesRaw.begin(), verticesRaw.end(), e.v2);
+		int idx1,idx2;
+		idx1 = it1 - base;
+		idx2 = it2 - base;
+		verticeNeighbors[idx1].push_back(verticesRaw[idx2]);
+		verticeNeighbors[idx2].push_back(verticesRaw[idx1]);
+	}
+	
+}
+
+void Pattern::sortVerticeNeighbors() {
+	int n = verticeNeighbors.size();
+	for (int i = 0; i < n; i++) {
+		Vector3 origin = Vector3(verticesRaw[i]);
+		vector<Vertice> list = verticeNeighbors[i];
+		sort(list.begin(), list.end(), compareNeighbors);
+		verticeNeighbors[i] = list;
+	}
+}
+
 void Pattern::loadSVG() {
 	XMLDocument svg;
 	svg.LoadFile(SVGfilename.c_str());
@@ -305,23 +351,25 @@ void Pattern::parseSVG() {
 	UniqueVertices(verticesRaw);
 	UniqueEdges(edgesRaw);
 
-		//debugEdgeList(edgesRaw);
-		//debugVerticeList(verticesRaw);
 	findIntersections();
 
 	// remove duplicate vertices and edges
 	UniqueVertices(verticesRaw);
 	UniqueEdges(edgesRaw);
 
-		debugEdgeList(edgesRaw);
-		debugVerticeList(verticesRaw);
+	debugEdgeList(edgesRaw);
+	debugVerticeList(verticesRaw);
+
+	// find neighbor vertices for each vertice
+	findVerticeNeighbors();
+	debugVerticeNeighbor(verticeNeighbors);
+	sortVerticeNeighbors();
+	debugVerticeNeighbor(verticeNeighbors);
 
 }
 
 void Pattern::parse() {
-	loadSVG();
-
-	
+	loadSVG();	
 	parseSVG();	
 	
 }
