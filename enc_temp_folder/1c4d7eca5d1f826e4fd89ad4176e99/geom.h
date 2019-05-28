@@ -183,7 +183,7 @@ float twiceSignedArea(vector<Vector3> points) {
 int polygonOrientation(vector<Vector3> points) {
 	/*
 	 * Returns the orientation of the 2D polygon defined by the input points.
-	 * -1 for counterclockwise, +1 for clockwise
+	 * +1 for counterclockwise, -1 for clockwise
 	 * via computing sum of signed areas of triangles formed with origin
 	 */
 	

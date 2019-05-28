@@ -446,7 +446,7 @@ void Pattern::findFaces(){
 		next[uv] = zero;
 
 		int ori = getpolygonOrientation(face);
-		if (!(w == zero) && ori < 0) {	// 只要逆时针的面
+		if (!(w == zero) && ori < 0) {
 			facesRaw.push_back(Face(face));
 		}
 	}

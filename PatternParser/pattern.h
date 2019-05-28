@@ -4,7 +4,8 @@
 #include <string>
 #include<algorithm>
 #include<math.h>
-
+#include<map>
+#include<sstream>
 #include "tinyxml2.h"
 
 using namespace std;
@@ -23,6 +24,10 @@ public:
 		:x(_x), y(_y), z(_z) {}
 	Vertice(float _x, float _y)
 		:x(_x), y(_y), z(0) {}
+	Vertice()
+		:x(0), y(0), z(0) {}
+	Vertice(const Vertice &other)
+		:x(other.x), y(other.y), z(other.z), id(other.id){}
 	bool operator==(const Vertice &other) const {
 		return (other.x == this->x) && (other.y == this->y) && (other.z == this->z);
 	}
@@ -47,6 +52,8 @@ class Face
 {
 public:
 	vector<Vertice> vts;
+	Face(){}
+	Face(vector<Vertice> v) :vts(v) {}
 };
 
 
@@ -60,6 +67,7 @@ private:
 	vector<Vertice> verticesRaw;
 	vector<Edge> edgesRaw;
 	vector<vector<Vertice>> verticeNeighbors;	// vertex id - neighbor ids
+	vector<Face> facesRaw;
 
 	void getElementList(vector<XMLElement*> &vec, XMLElement *root, string name);
 	float getOpacityAngle(XMLElement* e);
@@ -71,6 +79,7 @@ private:
 
 	void findIntersections();
 	void findVerticeNeighbors();
+	void findFaces();
 
 	void sortVerticeNeighbors();
 
