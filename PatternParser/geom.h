@@ -112,6 +112,10 @@ struct Vector3 {
 	float operator *(const Vector3 &a) const {
 		return x * a.x + y * a.y + z * a.z;
 	}
+
+	float lengthSq() {
+		return x * x + y * y + z * z;
+	}
 };
 
 // ÖØÔØ¼Ó¼õÔËËã·û

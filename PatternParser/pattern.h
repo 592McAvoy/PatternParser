@@ -12,7 +12,7 @@ using namespace std;
 using namespace tinyxml2;
 
 enum TYPE {
-	Border, Mountain, Valley, Cut, Triangulation, Hinge, NONE
+	Border, Mountain, Valley, Facet, Cut, Triangulation, Hinge, NONE
 };
 
 class Vertice
@@ -43,6 +43,8 @@ public:
 		:v1(_v1), v2(_v2), angle(0), type(t) {}
 	Edge(Vertice &_v1, Vertice &_v2, float a, TYPE t)
 		:v1(_v1), v2(_v2), angle(a), type(t) {}
+	Edge(const Edge &other)
+		:v1(other.v1), v2(other.v2), angle(other.angle), type(other.type) {}
 	bool operator==(const Edge &other) const{
 		return (other.v1 == this->v1) && (other.v2 == this->v2) && (other.type == this->type);
 	}
@@ -59,6 +61,7 @@ public:
 
 
 const float	VERT_TOL = 3.0f;	//vertex merge tolerance
+const float	NULL_DIST = -99.9f;	//represent NULL when comparing distance
 
 class Pattern {
 private:
@@ -79,9 +82,10 @@ private:
 
 	void findIntersections();
 	void findVerticeNeighbors();
-	void findFaces();
-
 	void sortVerticeNeighbors();
+	void findFaces();	
+
+	void triangulatePolys();
 
 	void loadSVG();
 	void parseSVG();

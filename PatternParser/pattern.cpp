@@ -25,15 +25,17 @@ static void debugElementList(vector<XMLElement*> &vec) {
 static void debugEdgeList(vector<Edge> &vec) {
 	cout << endl << "Edge length: " << vec.size() << endl ;
 	string types[] = {
-	"Border", "Mountain", "Valley", "Cut", "Triangulation", "Hinge", "NONE"
+	"Border", "Mountain", "Valley", "Facet","Cut", "Triangulation", "Hinge", "NONE"
 	};
+	int i = 0;
 	for (Edge e : vec) {
 		Vertice v1 = e.v1;
 		Vertice v2 = e.v2;
 		float angle = e.angle;
-		cout << "type: " << types[e.type] << "\t"
-			<< "v1 (" << v1.x << "," << v1.y << "," << v1.z << ")\t"
-			<< "v2 (" << v2.x << "," << v2.y << "," << v2.z << ")\t"
+		cout << "idx: " << i++ << "\t"
+			<< "type: " << types[e.type] << "\t"
+			<< "v1 :" << v1.x << "," << v1.y << "," << v1.z << ")\t"
+			<< "v2 :" << v2.x << "," << v2.y << "," << v2.z << ")\t"
 			<< "angle: " << angle << endl;
 	}
 }
@@ -53,7 +55,7 @@ static void debugVerticeIDList(vector<Vertice> &vec) {
 }
 
 static void debugVerticeNeighbor(vector<vector<Vertice>> &vec) {
-	cout << endl<< "Vertice length: " << vec.size() << endl ;
+	cout << endl<< "Neighbor length: " << vec.size() << endl ;
 	int n = vec.size();
 	for (int i = 0; i < n; i++) {
 		vector<Vertice> neis = vec[i];
@@ -120,6 +122,8 @@ static bool compareVertice(Vertice v1, Vertice v2) {
 }
 
 static bool compareEdge(Edge e1, Edge e2) {
+	if (e1.v1 == e2.v1)
+		return compareVertice(e1.v2, e2.v2);
 	return compareVertice(e1.v1, e2.v1);
 }
 
@@ -130,6 +134,22 @@ static bool compareNeighbors(Vertice &v1, Vertice &v2) {
 static void UniqueVertices(vector<Vertice> &vec) {
 	sort(vec.begin(), vec.end(), compareVertice);
 	vec.erase(unique(vec.begin(), vec.end()), vec.end());
+}
+
+static void collapseNearbyVertices(vector<Vertice> &vec) {
+	vector<int> tobeErase;
+	int n = vec.size();
+	for (int i = 0; i < n; i++) {
+		Vector3 v0(vec[i]);
+		Vector3 v1(vec[(i - 1 + n) % n]);
+		if (distance(v0, v1) < VERT_TOL)
+			tobeErase.push_back(i);
+	}
+	n = tobeErase.size();
+	vector<Vertice>::iterator base = vec.begin();
+	for (int i = 0; i < n; i++) {
+		vec.erase(base + tobeErase[i] - i);
+	}
 }
 
 static void UniqueEdges(vector<Edge> &vec) {
@@ -162,8 +182,8 @@ static void line_intersect(Vector2 &v1, Vector2 &v2, Vector2 &v3, Vector2 &v4, V
 
 static float getDistFromEnd(float t, float length, float tol) {
 	float  dist = t * length;
-	if (dist < -tol) return 0;
-	if (dist > length + tol) return 0;
+	if (dist < -tol) return NULL_DIST;
+	if (dist > length + tol) return NULL_DIST;
 	return dist;
 }
 
@@ -324,7 +344,7 @@ void Pattern::findIntersections() {
 			float d1 = getDistFromEnd(t1, length1, VERT_TOL);
 			float d2 = getDistFromEnd(t2, length2, VERT_TOL);
 
-			if (d1 == 0 || d2 == 0) continue;	//no crossing
+			if (d1 == NULL_DIST || d2 == NULL_DIST) continue;	//no crossing
 
 			bool seg1Int = d1 > VERT_TOL && d1 < length1 - VERT_TOL;
 			bool seg2Int = d2 > VERT_TOL && d2 < length2 - VERT_TOL;
@@ -452,6 +472,58 @@ void Pattern::findFaces(){
 	}
 };
 
+void Pattern::triangulatePolys() {
+	int n = facesRaw.size();
+	vector<Face> triangulatedFaces;
+	for (int i = 0; i < n; i++) {
+
+		Face face = facesRaw[i];
+
+		int facelen = face.vts.size();
+		if (facelen == 3) {
+			triangulatedFaces.push_back(face);
+			continue;
+		}
+
+		//check for quad and solve manually
+		if (facelen == 4) {
+			vector<Vertice> faceVts = face.vts;
+			vector<Vertice> faceVts1 = face.vts;
+
+			Vector3 faceV1 = Vector3(faceVts[0]);
+			Vector3 faceV2 = Vector3(faceVts[1]);
+			Vector3 faceV3 = Vector3(faceVts[2]);
+			Vector3 faceV4 = Vector3(faceVts[3]);
+
+			float dist1 = (faceV1 - faceV3).lengthSq();
+			float dist2 = (faceV2 - faceV4).lengthSq();
+
+			if (dist2 < dist1) {
+				edgesRaw.push_back(Edge(faceVts[1], faceVts[3], 0, TYPE::Facet));
+				
+				faceVts.erase(faceVts.begin() + 2);
+				triangulatedFaces.push_back(Face(faceVts));
+					
+				faceVts1.erase(faceVts1.begin() + 0);
+				triangulatedFaces.push_back(Face(faceVts1));
+			}
+			else {
+				edgesRaw.push_back(Edge(faceVts[0], faceVts[2], 0, TYPE::Facet));
+
+				faceVts.erase(faceVts.begin() + 3);
+				triangulatedFaces.push_back(Face(faceVts));
+
+				faceVts1.erase(faceVts1.begin() + 1);
+				triangulatedFaces.push_back(Face(faceVts1));
+			}
+			continue;
+		}
+
+		// todo: 4条边以上的三角化
+	}
+	facesRaw = triangulatedFaces;
+}
+
 void Pattern::loadSVG() {
 	XMLDocument svg;
 	svg.LoadFile(SVGfilename.c_str());
@@ -488,15 +560,17 @@ void Pattern::parseSVG() {
 	debugEdgeList(edgesRaw);
 	debugVerticeList(verticesRaw);
 
-	// find neighbor vertices for each vertice
+	// find counter-clockwise neighbor vertices for each vertice
 	findVerticeNeighbors();
-	//debugVerticeNeighbor(verticeNeighbors);
 	sortVerticeNeighbors();
 	debugVerticeNeighbor(verticeNeighbors);
 
 	findFaces();
 	debugFaceList(facesRaw);
 
+	triangulatePolys();
+	debugEdgeList(edgesRaw);
+	debugFaceList(facesRaw);
 }
 
 void Pattern::parse() {
@@ -506,7 +580,7 @@ void Pattern::parse() {
 }
 
 int main() {
-	Pattern p("../assets/Bases/birdBase.svg");
+	Pattern p("../assets/Bases/boatBase.svg");
 	p.parse();
 	cin.get();
 }
